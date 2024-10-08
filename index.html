@@ -11,8 +11,8 @@
     <button id="getLocationBtn">Send My Location</button>
 
     <script>
-        // تغيير الوقت إلى 9 أكتوبر 2024، الساعة 12:50 صباحًا
-        const registrationOpenTime = new Date("2024-10-09T00:50:00"); 
+        // تحديد الوقت الذي يتمكن فيه المستخدم من التسجيل
+        let registrationOpenTime = new Date("2024-10-09T02:21:00");
 
         // Function to check if the current date and time is past the allowed date and time
         function canRegister() {
@@ -20,15 +20,21 @@
             return currentTime >= registrationOpenTime;
         }
 
-        // Function to check if user has already submitted their location
+        // Function to check if the user has already submitted their location
         function checkSubmission() {
-            if (localStorage.getItem('submissionTime')) {
-                if (canRegister()) {
-                    // Allow user to submit again
-                    localStorage.removeItem('submissionTime'); // Clear the submission time
+            const lastSubmissionTime = localStorage.getItem('submissionTime');
+            const currentTime = new Date().getTime();
+
+            // إذا كان هناك وقت تسجيل سابق
+            if (lastSubmissionTime) {
+                // إذا كان الوقت الجديد أكبر من وقت التسجيل السابق، امسح التخزين المحلي
+                if (currentTime > registrationOpenTime.getTime()) {
+                    localStorage.removeItem('submissionTime');
                 } else {
+                    // إذا لم يتجاوز الوقت المسموح، عطل الزر
                     document.getElementById('getLocationBtn').disabled = true;
-                    document.getElementById('getLocationBtn').innerText = "You have already submitted your location!";
+                    document.getElementById('getLocationBtn').innerText = "التسجيل غير مسموح به!";
+                    return;
                 }
             }
         }
@@ -37,6 +43,18 @@
         checkSubmission();
 
         document.getElementById('getLocationBtn').addEventListener('click', function() {
+            // تحقق مما إذا كان التسجيل مسموحًا
+            if (!canRegister()) {
+                alert("التسجيل غير مسموح به قبل الوقت المحدد.");
+                return;
+            }
+
+            // إذا تم تسجيل الموقع بالفعل، عطل الزر
+            if (localStorage.getItem('submissionTime')) {
+                alert("لقد أرسلت موقعك بالفعل!");
+                return;
+            }
+
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
             } else {
@@ -93,13 +111,12 @@
                         console.log("Location and IP submitted successfully:", data);
                         alert(statusMessage);
 
-                        // Mark location as submitted with current time
-                        const currentTime = new Date().getTime();
-                        localStorage.setItem('submissionTime', currentTime);
+                        // Save the current time as the submission time
+                        localStorage.setItem('submissionTime', new Date().getTime());
 
                         // Disable the button and change its text
                         document.getElementById('getLocationBtn').disabled = true;
-                        document.getElementById('getLocationBtn').innerText = "You have already submitted your location!";
+                        document.getElementById('getLocationBtn').innerText = "لقد أرسلت موقعك بالفعل!";
                     })
                     .catch(error => {
                         console.error("Error:", error);
