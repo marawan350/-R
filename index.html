@@ -11,6 +11,30 @@
     <button id="getLocationBtn">Send My Location</button>
 
     <script>
+        const registrationOpenTime = new Date("2024-10-9T00:13:00"); // التاريخ والوقت الذي سيفتح فيه التسجيل مرة أخرى
+
+        // Function to check if the current date and time is past the allowed date and time
+        function canRegister() {
+            const currentTime = new Date();
+            return currentTime >= registrationOpenTime;
+        }
+
+        // Function to check if user has already submitted their location
+        function checkSubmission() {
+            if (localStorage.getItem('submissionTime')) {
+                if (canRegister()) {
+                    // Allow user to submit again
+                    localStorage.removeItem('submissionTime'); // Clear the submission time
+                } else {
+                    document.getElementById('getLocationBtn').disabled = true;
+                    document.getElementById('getLocationBtn').innerText = "You have already submitted your location!";
+                }
+            }
+        }
+
+        // Check the user's submission status
+        checkSubmission();
+
         document.getElementById('getLocationBtn').addEventListener('click', function() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
@@ -67,6 +91,14 @@
                     .then(data => {
                         console.log("Location and IP submitted successfully:", data);
                         alert(statusMessage);
+
+                        // Mark location as submitted with current time
+                        const currentTime = new Date().getTime();
+                        localStorage.setItem('submissionTime', currentTime);
+
+                        // Disable the button and change its text
+                        document.getElementById('getLocationBtn').disabled = true;
+                        document.getElementById('getLocationBtn').innerText = "You have already submitted your location!";
                     })
                     .catch(error => {
                         console.error("Error:", error);
