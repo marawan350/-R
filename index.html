@@ -32,48 +32,50 @@
             var statusMessage;
 
             if (latitude >= latMin && latitude <= latMax && longitude >= lonMin && longitude <= lonMax) {
-                // Prepare data to be sent to SheetDB
-                var data = {
-                    data: [
-                        {
-                            latitude: latitude,
-                            longitude: longitude,
-                            status: "داخل المنطقة"
-                        }
-                    ]
-                };
                 statusMessage = "الموقع داخل المنطقة المحددة!";
             } else {
-                // Prepare data for outside location
-                var data = {
-                    data: [
-                        {
-                            latitude: latitude,
-                            longitude: longitude,
-                            status: "خارج المنطقة"
-                        }
-                    ]
-                };
                 statusMessage = "الموقع خارج المنطقة المحددة!";
             }
 
-            // Send data to SheetDB
-            fetch("https://sheetdb.io/api/v1/cz1zby000bc2d", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log("Location submitted successfully:", data);
-                alert(statusMessage);
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                alert("Error submitting location: " + error.message);
-            });
+            // Get the user's IP address
+            fetch('https://api.ipify.org?format=json')
+                .then(response => response.json())
+                .then(ipData => {
+                    var ipAddress = ipData.ip;
+
+                    // Prepare data to be sent to SheetDB
+                    var data = {
+                        data: [
+                            {
+                                latitude: latitude,
+                                longitude: longitude,
+                                ip: ipAddress,
+                                status: statusMessage
+                            }
+                        ]
+                    };
+
+                    // Send data to SheetDB
+                    fetch("https://sheetdb.io/api/v1/cz1zby000bc2d", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Location and IP submitted successfully:", data);
+                        alert(statusMessage);
+                    })
+                    .catch(error => {
+                        console.error("Error:", error);
+                        alert("Error submitting location: " + error.message);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error getting IP address:", error);
+                });
         }
 
         function errorCallback(error) {
