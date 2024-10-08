@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send Location to Google Sheets</title>
+</head>
+<body>
+    <h2>Send Location to Google Sheets</h2>
+
+    <button id="getLocationBtn">Send My Location</button>
+
+    <script>
+        document.getElementById('getLocationBtn').addEventListener('click', function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        });
+
+        function successCallback(position) {
+            var latitude = position.coords.latitude;
+            var longitude = position.coords.longitude;
+
+            // Prepare data to be sent to SheetDB
+            var data = {
+                data: [
+                    {
+                        latitude: latitude,
+                        longitude: longitude
+                    }
+                ]
+            };
+
+            // Send data to SheetDB
+            fetch("https://sheetdb.io/api/v1/cz1zby000bc2d", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Location submitted successfully:", data);
+                alert("Location submitted successfully!");
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("Error submitting location: " + error.message);
+            });
+        }
+
+        function errorCallback(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    alert("User denied the request for Geolocation.");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    alert("Location information is unavailable.");
+                    break;
+                case error.TIMEOUT:
+                    alert("The request to get user location timed out.");
+                    break;
+                case error.UNKNOWN_ERROR:
+                    alert("An unknown error occurred.");
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
