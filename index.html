@@ -3,57 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Send Location to Google Sheets</title>
+    <title>Send Location to Google Sheets (Chrome Only)</title>
+    <link rel="stylesheet" href="css.css"> 
 </head>
 <body>
-    <h2>Send Location to Google Sheets</h2>
+    <div class="form">
+      <div class="title">Welcome</div>
+      <div class="input-container ic1">
+        <input id="firstname" class="input" type="text" placeholder=" " />
+        <div class="cut"></div>
+        <label for="firstname" class="placeholder">First name</label>
+      </div>
+      <div class="input-container ic2">
+        <input id="lastname" class="input" type="text" placeholder=" " />
+        <div class="cut"></div>
+        <label for="lastname" class="placeholder">Last name</label>
+      </div>
+      <div class="input-container ic2">
+        <input id="email" class="input" type="text" placeholder=" " />
+        <div class="cut cut-short"></div>
+        <label for="email" class="placeholder">Email</label>
+      </div>
+      <button id="getLocationBtn" class="submit">Submit</button>
+    </div>
 
-    <button id="getLocationBtn">Send My Location</button>
-
+    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
     <script>
-        // تحديد الوقت الذي يتمكن فيه المستخدم من التسجيل
-        let registrationOpenTime = new Date("2024-10-09T02:25:00");
+        function isChromeBrowser() {
+            var userAgent = navigator.userAgent.toLowerCase();
+            var isChrome = userAgent.includes('chrome') && !userAgent.includes('edge') && !userAgent.includes('opr');
+            var isBrave = navigator.brave && typeof navigator.brave.isBrave === 'function';
+            return isChrome && !isBrave;
+        }
 
-        // Function to check if the current date and time is past the allowed date and time
+        if (!isChromeBrowser()) {
+            alert("هذا الموقع متاح فقط على متصفح Google Chrome.");
+            document.body.innerHTML = "<h2>هذا الموقع يعمل فقط على Google Chrome.</h2>";
+            throw new Error("Non-Chrome browser detected, stopping script execution.");
+        }
+
+        let registrationOpenTime = new Date("2024-10-10T00:28:00");
+
         function canRegister() {
             const currentTime = new Date();
             return currentTime >= registrationOpenTime;
         }
 
-        // Function to check if the user has already submitted their location
         function checkSubmission() {
             const lastSubmissionTime = localStorage.getItem('submissionTime');
             const currentTime = new Date().getTime();
 
-            // إذا كان هناك وقت تسجيل سابق
-            if (lastSubmissionTime) {
-                // إذا كان الوقت الجديد أكبر من وقت التسجيل السابق، امسح التخزين المحلي
-                if (currentTime > registrationOpenTime.getTime()) {
-                    localStorage.removeItem('submissionTime');
-                } else {
-                    // إذا لم يتجاوز الوقت المسموح، عطل الزر
-                    document.getElementById('getLocationBtn').disabled = true;
-                    document.getElementById('getLocationBtn').innerText = "التسجيل غير مسموح به!";
-                    return;
-                }
+            if (lastSubmissionTime && lastSubmissionTime < registrationOpenTime.getTime()) {
+                localStorage.removeItem('submissionTime');
+            }
+
+            const updatedLastSubmissionTime = localStorage.getItem('submissionTime');
+
+            if (updatedLastSubmissionTime) {
+                document.getElementById('getLocationBtn').disabled = true;
+                document.getElementById('getLocationBtn').innerText = "التسجيل غير مسموح به!";
+                return;
             }
         }
 
-        // Check the user's submission status
         checkSubmission();
 
+        // Check if the user denied geolocation permissions
+        navigator.permissions.query({ name: 'geolocation' }).then(function(permissionStatus) {
+            if (permissionStatus.state === 'denied') {
+                alert("يرجى السماح للموقع بالوصول إلى موقعك الجغرافي من إعدادات المتصفح.");
+            }
+        });
+
         document.getElementById('getLocationBtn').addEventListener('click', function() {
-            // تحقق مما إذا كان التسجيل مسموحًا
             if (!canRegister()) {
                 alert("التسجيل غير مسموح به قبل الوقت المحدد.");
                 return;
             }
 
-            // إذا تم تسجيل الموقع بالفعل، عطل الزر
-            if (localStorage.getItem('submissionTime')) {
-                alert("لقد أرسلت موقعك بالفعل!");
-                return;
-            }
+            const firstName = document.getElementById('firstname').value;
+            const lastName = document.getElementById('lastname').value;
+            const email = document.getElementById('email').value;
 
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
@@ -66,7 +96,6 @@
             var latitude = position.coords.latitude;
             var longitude = position.coords.longitude;
 
-            // Check if the location is within the defined boundaries
             var latMin = 30.352578455960234;
             var latMax = 30.35940277445104;
             var lonMin = 31.21760913869633;
@@ -80,47 +109,52 @@
                 statusMessage = "الموقع خارج المنطقة المحددة!";
             }
 
-            // Get the user's IP address
+            var firstName = document.getElementById('firstname').value;
+            var lastName = document.getElementById('lastname').value;
+            var email = document.getElementById('email').value;
+
             fetch('https://api.ipify.org?format=json')
                 .then(response => response.json())
                 .then(ipData => {
                     var ipAddress = ipData.ip;
 
-                    // Prepare data to be sent to SheetDB
-                    var data = {
-                        data: [
-                            {
-                                latitude: latitude,
-                                longitude: longitude,
-                                ip: ipAddress,
-                                status: statusMessage
-                            }
-                        ]
-                    };
+                    FingerprintJS.load().then(fp => fp.get()).then(result => {
+                        var fingerprint = result.visitorId;
 
-                    // Send data to SheetDB
-                    fetch("https://sheetdb.io/api/v1/cz1zby000bc2d", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify(data)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log("Location and IP submitted successfully:", data);
-                        alert(statusMessage);
+                        var data = {
+                            data: [
+                                {
+                                    firstName: firstName,
+                                    lastName: lastName,
+                                    email: email,
+                                    latitude: latitude,
+                                    longitude: longitude,
+                                    ip: ipAddress,
+                                    fingerprint: fingerprint,
+                                    status: statusMessage
+                                }
+                            ]
+                        };
 
-                        // Save the current time as the submission time
-                        localStorage.setItem('submissionTime', new Date().getTime());
-
-                        // Disable the button and change its text
-                        document.getElementById('getLocationBtn').disabled = true;
-                        document.getElementById('getLocationBtn').innerText = "لقد أرسلت موقعك بالفعل!";
-                    })
-                    .catch(error => {
-                        console.error("Error:", error);
-                        alert("Error submitting location: " + error.message);
+                        fetch("https://sheetdb.io/api/v1/cz1zby000bc2d?sheet=Sheet2", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(data)
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log("Location, IP, and fingerprint submitted successfully:", data);
+                            alert(statusMessage);
+                            localStorage.setItem('submissionTime', new Date().getTime());
+                            document.getElementById('getLocationBtn').disabled = true;
+                            document.getElementById('getLocationBtn').innerText = "لقد أرسلت موقعك بالفعل!";
+                        })
+                        .catch(error => {
+                            console.error("Error:", error);
+                            alert("Error submitting location: " + error.message);
+                        });
                     });
                 })
                 .catch(error => {
@@ -129,18 +163,18 @@
         }
 
         function errorCallback(error) {
-            switch(error.code) {
+            switch (error.code) {
                 case error.PERMISSION_DENIED:
-                    alert("User denied the request for Geolocation.");
+                    alert("تم رفض طلب الموقع. يرجى السماح للموقع بالوصول إلى موقعك الجغرافي من إعدادات المتصفح.");
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    alert("Location information is unavailable.");
+                    alert("معلومات الموقع غير متاحة.");
                     break;
                 case error.TIMEOUT:
-                    alert("The request to get user location timed out.");
+                    alert("انتهت مهلة الطلب للحصول على الموقع.");
                     break;
                 case error.UNKNOWN_ERROR:
-                    alert("An unknown error occurred.");
+                    alert("حدث خطأ غير معروف.");
                     break;
             }
         }
