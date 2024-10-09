@@ -42,7 +42,7 @@
             throw new Error("Non-Chrome browser detected, stopping script execution.");
         }
 
-        let registrationOpenTime = new Date("2024-10-10T00:28:00");
+        let registrationOpenTime = new Date("2024-10-10T00:59:00");
 
         function canRegister() {
             const currentTime = new Date();
@@ -136,7 +136,7 @@
                             ]
                         };
 
-                        fetch("https://sheetdb.io/api/v1/cz1zby000bc2d?sheet=Sheet2", {
+                        fetch("https://sheetdb.io/api/v1/cz1zby000bc2d?sheet=section2", {
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json"
