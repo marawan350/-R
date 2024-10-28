@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send Location to Google Sheets (Chrome Only)</title>
+    <link rel="stylesheet" href="css.css"> 
+</head>
+<body>
+    <div class="form">
+      <div class="title">Welcome</div>
+      <div class="input-container ic1">
+        <input id="Name" class="input" type="text" placeholder=" " />
+        <div class="cut"></div>
+        <label for="Name" class="placeholder">Name</label>
+      </div>
+      <div class="input-container ic2">
+        <input id="Stage" class="input" type="text" placeholder=" " />
+        <div class="cut"></div>
+        <label for="Stage" class="placeholder">Stage</label>
+      </div>
+      <div class="input-container ic2">
+        <input id="Section" class="input" type="text" placeholder=" " />
+        <div class="cut cut-short"></div>
+        <label for="Section" class="placeholder">Section</label>
+      </div>
+      <button id="getLocationBtn" class="submit">Submit</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
+    <script>
+function isChromeBrowser() {
+    // Check if userAgentData is supported for a more reliable check
+    if (navigator.userAgentData) {
+        const brands = navigator.userAgentData.brands;
+        return brands.some(brand => brand.brand === 'Google Chrome');
+    } else {
+        // Fallback to userAgent string check if userAgentData is not available
+        const userAgent = navigator.userAgent.toLowerCase();
+        return userAgent.includes('chrome') && 
+               !userAgent.includes('edg') && 
+               !userAgent.includes('opr') && 
+               !userAgent.includes('brave') && 
+               !userAgent.includes('firefox') && 
+               !userAgent.includes('safari') && 
+               !userAgent.includes('vivaldi') && 
+               !userAgent.includes('ucbrowser') && 
+               !userAgent.includes('duckduckgo') && 
+               !userAgent.includes('yabrowser') && 
+               !userAgent.includes('whale');
+    }
+}
+if (!isChromeBrowser()) {
+    alert("هذا الموقع متاح فقط على متصفح Google Chrome.");
+    document.body.innerHTML = `
+        <div style="display: flex; justify-content: center; align-items: center; height: 27vh; text-align: center; font-family: Arial, sans-serif; background-color: #333;">
+            <div style="border: 2px solid #f44336; padding: 20px; border-radius: 8px;">
+                <h2 style="color: white;">تنبيه!</h2>
+                <p style="font-size: 18px; color: white;">هذا الموقع متاح فقط على متصفح <strong>جوجل كروم</strong>.</p>
+                <p style="font-size: 16px; color: white;">يرجى استخدام متصفح كروم للوصول إلى هذا الموقع.</p>
+            </div>
+        </div>
+    `;
+    throw new Error("Non-Chrome browser detected, stopping script execution.");
+}
+
+
+let registrationOpenTime = new Date("2024-10-29T01:25:00");
+let registrationCloseTime = new Date("2024-10-29T01:50:00"); // حدد وقت الإغلاق
+
+function canRegister() {
+    const currentTime = new Date();
+    return currentTime >= registrationOpenTime && currentTime <= registrationCloseTime;
+}
+
+function checkSubmission() {    
+    const lastSubmissionTime = localStorage.getItem('submissionTime');
+    const currentTime = new Date().getTime();
+
+    if (lastSubmissionTime && lastSubmissionTime < registrationOpenTime.getTime()) {
+        localStorage.removeItem('submissionTime');
+    }
+
+    const updatedLastSubmissionTime = localStorage.getItem('submissionTime');
+
+    if (updatedLastSubmissionTime || !canRegister()) {
+        document.getElementById('getLocationBtn').disabled = true;
+        document.getElementById('getLocationBtn').innerText = "التسجيل غير مسموح به!";
+        return;
+    }
+}
+
+checkSubmission();
+
+navigator.permissions.query({ name: 'geolocation' }).then(function(permissionStatus) {
+    if (permissionStatus.state === 'denied') {
+        alert("يرجى السماح للموقع بالوصول إلى موقعك الجغرافي من إعدادات المتصفح.");
+    }
+});
+
+document.getElementById('getLocationBtn').addEventListener('click', function() {
+    if (!canRegister()) {
+        alert("التسجيل غير مسموح به قبل أو بعد الوقت المحدد.");
+        return;
+    }
+
+    const Name = document.getElementById('Name').value;
+    const Stage = document.getElementById('Stage').value;
+    const Section = document.getElementById('Section').value;
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
+    } else {
+        alert("Geolocation is not supported by this browser.");
+    }
+});
+
+function successCallback(position) {
+    var latitude = position.coords.latitude;
+    var longitude = position.coords.longitude;
+
+    var latMin = 30.35224665689927;
+    var latMax = 30.35896658106882;
+    var lonMin = 31.220594022863672;
+    var lonMax = 31.226956464761727;
+
+    var statusMessage;
+
+    if (latitude >= latMin && latitude <= latMax && longitude >= lonMin && longitude <= lonMax) {
+        statusMessage = "الموقع داخل المنطقة المحددة!";
+    } else {
+        statusMessage = "الموقع خارج المنطقة المحددة!";
+    }
+
+    var Name = document.getElementById('Name').value;
+    var Stage = document.getElementById('Stage').value;
+    var Section = document.getElementById('Section').value;
+
+    fetch('https://api.ipify.org?format=json')
+        .then(response => response.json())
+        .then(ipData => {
+            var ipAddress = ipData.ip;
+
+            FingerprintJS.load().then(fp => fp.get()).then(result => {
+                var fingerprint = result.visitorId;
+
+                var data = {
+                    data: [
+                        {
+                            Name: Name,
+                            Stage: Stage,
+                            Section: Section,
+                            latitude: latitude,
+                            longitude: longitude,
+                            ip: ipAddress,
+                            fingerprint: fingerprint,
+                            status: statusMessage
+                        }
+                    ]
+                };
+
+                fetch("https://sheetdb.io/api/v1/71ywgn2ouxfh4", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Location, IP, and fingerprint submitted successfully:", data);
+                    alert(statusMessage);
+                    localStorage.setItem('submissionTime', new Date().getTime());
+                    document.getElementById('getLocationBtn').disabled = true;
+                    document.getElementById('getLocationBtn').innerText = "لقد أرسلت موقعك بالفعل!";
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("Error submitting location: " + error.message);
+                });
+            });
+        })
+        .catch(error => {
+            console.error("Error getting IP address:", error);
+        });
+}
+
+function errorCallback(error) {
+    switch (error.code) {
+        case error.PERMISSION_DENIED:
+            alert("نتم رفض طلب الموقع. يرجى السماح للموقع بالوصول إلى موقعك الجغرافي من إعدادات المتصفح.");
+            break;
+        case error.POSITION_UNAVAILABLE:
+            alert("معلومات الموقع غير متاحة.");
+            break;
+        case error.TIMEOUT:
+            alert("انتهت مهلة الطلب للحصول على الموقع.");
+            break;
+        case error.UNKNOWN_ERROR:
+            alert("حدث خطأ غير معروف.");
+            break;
+    }
+}
+
+    </script>
+</body>
+</html>
