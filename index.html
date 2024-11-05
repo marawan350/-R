@@ -41,7 +41,6 @@ return (
     !userAgent.includes('opr') && 
     !userAgent.includes('brave') && 
     !userAgent.includes('firefox') && 
-    !userAgent.includes('safari') && 
     !userAgent.includes('vivaldi') && 
     !userAgent.includes('ucbrowser') && 
     !userAgent.includes('duckduckgo') && 
@@ -66,8 +65,8 @@ if (!isChromeBrowser()) {
     throw new Error("Non-Chrome browser detected, stopping script execution.");
 }
 
-let registrationOpenTime = new Date("2024-11-05T03:30:00");
-let registrationCloseTime = new Date("2024-11-05T04:59:00");
+let registrationOpenTime = new Date("2024-11-05T09:15:00");
+let registrationCloseTime = new Date("2024-11-05T11:00:00");
 
 function canRegister() {
     const currentTime = new Date();
